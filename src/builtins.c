@@ -1,4 +1,4 @@
-#include "shell.h"
+#include "myshell.h"
 
 int lsh_cd(char **args) {
     if (args[1] == NULL) {
