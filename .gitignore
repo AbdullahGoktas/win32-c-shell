@@ -1,0 +1,13 @@
+# 1. Compiled Object Files
+*.o
+
+# 2. Executable Files (Windows, Linux, macOS)
+myshell
+*.exe
+*.out
+*.app
+
+# 3. Editor and Operating System Residues
+.vscode/
+.DS_Store
+Thumbs.db
