@@ -15,8 +15,12 @@ char *read_line(void) {
         /* Read a character */
         c = getchar();
 
-        /* If we hit EOF or newline, replace it with null character and return */
-        if (c == EOF || c == '\n') {
+        /* If we hit EOF or newline, handle appropriately */
+        if (c == EOF) {
+            free(buffer);
+            return NULL; /* Send NULL to main to exit shell */
+        }
+        if (c == '\n') {
             buffer[position] = '\0';
             return buffer;
         } else {

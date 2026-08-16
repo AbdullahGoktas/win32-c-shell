@@ -17,12 +17,13 @@ char *read_line(void);
 char **split_line(char *line);
 
 /* Execution Functions */
-int execute_command(char **args);
-int launch_process(char **args);
+int execute_logic(char **args, int *shell_active);
+int execute_command(char **args, int *shell_active);
+int launch_process(char **args, int is_bg);
 
 /* Builtin Functions */
-int execute_builtin(char **args);
+int execute_builtin(char **args, int *shell_active);
 int lsh_cd(char **args);
-int lsh_exit(char **args);
+int lsh_exit(char **args, int *shell_active);
 
 #endif

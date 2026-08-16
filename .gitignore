@@ -1,5 +1,6 @@
 # 1. Compiled Object Files
 *.o
+obj/
 
 # 2. Executable Files (Windows, Linux, macOS)
 myshell

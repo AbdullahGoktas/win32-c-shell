@@ -1,22 +1,16 @@
 # My Custom Shell
 
-A custom Unix shell written in C, featuring:
+A custom shell written in C for Windows environments, featuring:
 - REPL (Read-Eval-Print Loop)
-- Basic command execution using `fork` and `execvp`
-- Pipelining support (`|`) to chain two commands
-- Built-in commands (`cd`, `help`, `exit`)
+- Command execution using Windows process management (`_spawnvp`)
+- Logical operators for command chaining (`&&`, `||`)
+- Background process execution (`&`)
+- Built-in commands (`cd`, `exit`)
 
 ## Build and Run
 
+Ensure you have `gcc` and `make` installed in your environment (e.g., MinGW or MSYS2).
+
 ```bash
 make
-./myshell
-```
-
-## Usage Examples
-
-- `ls -l`
-- `ls -l | grep .c`
-- `cd src`
-- `help`
-- `exit`
+./myshell.exe
