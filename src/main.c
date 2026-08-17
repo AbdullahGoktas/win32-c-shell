@@ -15,6 +15,12 @@ int main() {
             break; /* Handle EOF (Ctrl+Z on Windows) */
         }
 
+        /* Add the raw input line to history before parsing */
+        /* split_line modifies the string, so it must be recorded beforehand */
+        if (line[0] != '\0') {
+            add_to_history(line);
+        }
+
         args = split_line(line);
         if (args != NULL) {
             /* Pass the parsed arguments to the logic evaluator */
@@ -25,6 +31,9 @@ int main() {
         /* Memory Management: Free allocated memory in each iteration */
         free(line);
     }
+
+    /* Clean up history memory allocations before exiting */
+    free_history();
 
     return EXIT_SUCCESS;
 }

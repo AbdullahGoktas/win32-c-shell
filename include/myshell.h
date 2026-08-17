@@ -11,6 +11,7 @@
 #define LSH_RL_BUFSIZE 1024
 #define LSH_TOK_BUFSIZE 64
 #define LSH_TOK_DELIM " \t\r\n\a"
+#define LSH_HIST_SIZE 100 /* Maximum number of commands in history */
 
 /* Parser Functions */
 char *read_line(void);
@@ -25,5 +26,10 @@ int launch_process(char **args, int is_bg);
 int execute_builtin(char **args, int *shell_active);
 int lsh_cd(char **args);
 int lsh_exit(char **args, int *shell_active);
+int lsh_history(char **args);
+
+/* History Functions */
+void add_to_history(char *line);
+void free_history(void);
 
 #endif
