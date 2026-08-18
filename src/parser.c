@@ -71,3 +71,23 @@ char **split_line(char *line) {
     tokens[position] = NULL; 
     return tokens;
 }
+
+void expand_variables(char **args) {
+    int i = 0;
+    while (args[i] != NULL) {
+        /* Check if the argument starts with '$' indicating a variable */
+        if (args[i][0] == '$' && strlen(args[i]) > 1) {
+            char *env_name = args[i] + 1; /* Skip the '$' character */
+            char *env_val = getenv(env_name);
+            
+            if (env_val != NULL) {
+                /* Replace the token with the environment variable value */
+                args[i] = env_val; 
+            } else {
+                /* If the variable is not found, replace with an empty string */
+                args[i] = ""; 
+            }
+        }
+        i++;
+    }
+}

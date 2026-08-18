@@ -23,6 +23,9 @@ int main() {
 
         args = split_line(line);
         if (args != NULL) {
+            /* Expand environment variables like $PATH or $USER */
+            expand_variables(args);
+            
             /* Pass the parsed arguments to the logic evaluator */
             execute_logic(args, &shell_active);
             free(args);

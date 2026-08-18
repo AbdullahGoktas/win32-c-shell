@@ -57,6 +57,27 @@ int lsh_exit(char **args, int *shell_active) {
     return 0; /* Success */
 }
 
+int lsh_export(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "myshell: expected argument to \"export\" (e.g., export VAR=VALUE)\n");
+        return 1;
+    }
+    
+    /* Ensure the argument contains an '=' character */
+    if (strchr(args[1], '=') == NULL) {
+        fprintf(stderr, "myshell: export format must be KEY=VALUE\n");
+        return 1;
+    }
+
+    /* _putenv sets the environment variable in Windows */
+    if (_putenv(args[1]) != 0) {
+        perror("myshell: export failed");
+        return 1;
+    }
+    
+    return 0; /* Success */
+}
+
 int execute_builtin(char **args, int *shell_active) {
     if (strcmp(args[0], "cd") == 0) {
         return lsh_cd(args);
@@ -66,6 +87,9 @@ int execute_builtin(char **args, int *shell_active) {
     }
     if (strcmp(args[0], "history") == 0) {
         return lsh_history(args);
+    }
+    if (strcmp(args[0], "export") == 0) {
+        return lsh_export(args);
     }
     
     /* Builtin not found */
