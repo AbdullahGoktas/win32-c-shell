@@ -4,10 +4,17 @@ int main() {
     char *line;
     char **args;
     int shell_active = 1;
+    char cwd[1024]; /* Buffer for the current working directory */
 
     /* REPL: Read, Evaluate, Print, Loop */
     while (shell_active) {
-        printf("myshell> ");
+        /* Print dynamic prompt with current working directory */
+        if (_getcwd(cwd, sizeof(cwd)) != NULL) {
+            printf("%s> ", cwd);
+        } else {
+            /* Fallback prompt if _getcwd fails */
+            printf("myshell> "); 
+        }
         
         line = read_line();
         if (line == NULL) {

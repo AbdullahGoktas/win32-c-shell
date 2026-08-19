@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <process.h> /* Windows process management (_spawnvp) */
+#include <direct.h>  /* Windows directory management (_getcwd) */
 #include <stdint.h>  /* For intptr_t */
 
 #define LSH_RL_BUFSIZE 1024
