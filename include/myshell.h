@@ -15,7 +15,7 @@
 #define LSH_HIST_SIZE 100 /* Maximum number of commands in history */
 
 /* Parser Functions */
-char *read_line(void);
+char *read_line(FILE *stream);
 char **split_line(char *line);
 void expand_variables(char **args);
 

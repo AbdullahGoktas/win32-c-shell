@@ -1,40 +1,61 @@
 #include "myshell.h"
 
-int main() {
+int main(int argc, char **argv) {
+    FILE *input_stream = stdin;
+    int interactive = 1;
+
+    /* Check if a script file was passed as an argument */
+    if (argc > 1) {
+        input_stream = fopen(argv[1], "r");
+        if (!input_stream) {
+            fprintf(stderr, "myshell: Cannot open script file %s\n", argv[1]);
+            return EXIT_FAILURE;
+        }
+        interactive = 0; /* Disable dynamic prompt in script mode */
+    }
+
     char *line;
     char **args;
     int shell_active = 1;
-    char cwd[1024]; /* Buffer for the current working directory */
+    char cwd[1024];
 
-    /* REPL: Read, Evaluate, Print, Loop */
+    /* REPL / Script Execution Loop */
     while (shell_active) {
-        /* Print dynamic prompt with current working directory */
-        if (_getcwd(cwd, sizeof(cwd)) != NULL) {
-            printf("%s> ", cwd);
-        } else {
-            /* Fallback prompt if _getcwd fails */
-            printf("myshell> "); 
+        
+        /* Print dynamic prompt only in interactive mode */
+        if (interactive) {
+            if (_getcwd(cwd, sizeof(cwd)) != NULL) {
+                printf("%s> ", cwd);
+            } else {
+                printf("myshell> "); 
+            }
         }
         
-        line = read_line();
+        /* Read from stdin or file */
+        line = read_line(input_stream);
+        
         if (line == NULL) {
-            printf("\n");
-            break; /* Handle EOF (Ctrl+Z on Windows) */
+            if (interactive) {
+                printf("\n");
+            }
+            break; /* EOF reached (Ctrl+Z or end of script file) */
         }
 
         /* Add the raw input line to history before parsing */
-        /* split_line modifies the string, so it must be recorded beforehand */
-        if (line[0] != '\0') {
+        if (line[0] != '\0' && interactive) {
             add_to_history(line);
         }
 
         args = split_line(line);
-        if (args != NULL) {
+        if (args != NULL && args[0] != NULL) {
             /* Expand environment variables like $PATH or $USER */
             expand_variables(args);
             
             /* Pass the parsed arguments to the logic evaluator */
             execute_logic(args, &shell_active);
+        }
+        
+        if (args != NULL) {
             free(args);
         }
 
@@ -42,7 +63,11 @@ int main() {
         free(line);
     }
 
-    /* Clean up history memory allocations before exiting */
+    /* Clean up resources */
+    if (!interactive) {
+        fclose(input_stream);
+    }
+    
     free_history();
 
     return EXIT_SUCCESS;

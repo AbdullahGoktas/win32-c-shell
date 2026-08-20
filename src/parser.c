@@ -1,6 +1,6 @@
 #include "myshell.h"
 
-char *read_line(void) {
+char *read_line(FILE *stream) {
     int bufsize = LSH_RL_BUFSIZE;
     int position = 0;
     char *buffer = malloc(sizeof(char) * bufsize);
@@ -12,14 +12,16 @@ char *read_line(void) {
     }
 
     while (1) {
-        /* Read a character */
-        c = getchar();
+        /* Read a character from the provided stream (stdin or file) */
+        c = fgetc(stream);
 
-        /* If we hit EOF or newline, handle appropriately */
+        /* If we hit EOF, handle appropriately */
         if (c == EOF) {
             free(buffer);
-            return NULL; /* Send NULL to main to exit shell */
+            return NULL; /* Send NULL to main to exit shell or finish script */
         }
+        
+        /* If we hit newline, terminate string and return */
         if (c == '\n') {
             buffer[position] = '\0';
             return buffer;
