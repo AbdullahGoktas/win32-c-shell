@@ -1,4 +1,7 @@
 #include "myshell.h"
+#include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 int launch_process(char **args, int is_bg) {
     intptr_t status;
@@ -11,48 +14,95 @@ int launch_process(char **args, int is_bg) {
     status = _spawnvp(mode, args[0], (const char * const *)args);
     
     if (status == -1) {
-        /* Print error if command execution fails */
         perror("myshell"); 
-        return 1; /* Return failure code */
+        return 1; 
     }
 
     if (is_bg) {
         printf("[Background process started with PID/Handle: %Id]\n", status);
-        return 0; /* Background tasks immediately return success to the shell */
+        return 0; 
     }
 
-    /* Return actual exit status of the command */
     return (int)status; 
 }
 
 int execute_command(char **args, int *shell_active) {
     if (args[0] == NULL) {
-        /* Empty command entered, continue */
         return 0; 
     }
 
-    /* Check for background execution '&' */
     int is_bg = 0;
     int i = 0;
     while (args[i] != NULL) {
         i++;
     }
     
-    /* If the last argument is '&', enable background mode */
     if (i > 0 && strcmp(args[i - 1], "&") == 0) {
         is_bg = 1;
-        args[i - 1] = NULL; /* Remove '&' from arguments before execution */
+        args[i - 1] = NULL; 
     }
 
-    /* Check if the command is a builtin (cd, exit) */
-    int builtin_status = execute_builtin(args, shell_active);
-    
-    /* If -1 is returned, it is a standard system command */
-    if (builtin_status == -1) {
-        return launch_process(args, is_bg);
+    /* --- I/O Redirection Start --- */
+    /* Windows'ta shell sürecinin kalıcı olarak yönlendirilmesini önlemek için STDIN ve STDOUT yedeklenir */
+    int saved_stdout = _dup(1);
+    int saved_stdin  = _dup(0);
+    int j = 0;
+    int redirect_err = 0;
+
+    while (args[j] != NULL) {
+        if (strcmp(args[j], "<") == 0) {
+            if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
+            int fd_in = _open(args[j + 1], _O_RDONLY);
+            if (fd_in < 0) { perror("myshell: input file"); redirect_err = 1; break; }
+            _dup2(fd_in, 0); /* 0: STDIN */
+            _close(fd_in);
+        } else if (strcmp(args[j], ">") == 0) {
+            if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
+            int fd_out = _open(args[j + 1], _O_WRONLY | _O_CREAT | _O_TRUNC, _S_IREAD | _S_IWRITE);
+            if (fd_out < 0) { perror("myshell: output file"); redirect_err = 1; break; }
+            _dup2(fd_out, 1); /* 1: STDOUT */
+            _close(fd_out);
+        } else if (strcmp(args[j], ">>") == 0) {
+            if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
+            int fd_out = _open(args[j + 1], _O_WRONLY | _O_CREAT | _O_APPEND, _S_IREAD | _S_IWRITE);
+            if (fd_out < 0) { perror("myshell: append file"); redirect_err = 1; break; }
+            _dup2(fd_out, 1);
+            _close(fd_out);
+        }
+        j++;
+    }
+
+    /* Argüman dizisi, exec çağrısı için ilk yönlendirme operatörünün olduğu yerden kesilir */
+    j = 0;
+    while (args[j] != NULL) {
+        if (strcmp(args[j], "<") == 0 || strcmp(args[j], ">") == 0 || strcmp(args[j], ">>") == 0) {
+            args[j] = NULL;
+            break;
+        }
+        j++;
+    }
+    /* --- I/O Redirection End --- */
+
+    int status = 1;
+
+    /* Eğer yönlendirme hatası yoksa komutu çalıştır */
+    if (!redirect_err && args[0] != NULL) {
+        int builtin_status = execute_builtin(args, shell_active);
+        
+        if (builtin_status == -1) {
+            status = launch_process(args, is_bg);
+        } else {
+            status = builtin_status;
+        }
     }
     
-    return builtin_status;
+    /* Komut (built-in veya sistem komutu) bittikten sonra standart akışları geri yükle */
+    _dup2(saved_stdout, 1);
+    _dup2(saved_stdin, 0);
+    _close(saved_stdout);
+    _close(saved_stdin);
+
+    return status;
 }
 
 int execute_logic(char **args, int *shell_active) {
@@ -64,27 +114,23 @@ int execute_logic(char **args, int *shell_active) {
     while (args[i] != NULL) {
         if (strcmp(args[i], "&&") == 0 || strcmp(args[i], "||") == 0) {
             char *operator = args[i];
-            args[i] = NULL; /* Isolate the current command */
+            args[i] = NULL; 
             
             if (!skip_next) {
                 status = execute_command(&args[start], shell_active);
             }
             
-            /* Evaluate logical condition for the NEXT command */
             if (strcmp(operator, "&&") == 0) {
-                /* AND: skip next if current failed (status != 0) */
                 skip_next = (status != 0); 
             } else if (strcmp(operator, "||") == 0) {
-                /* OR: skip next if current succeeded (status == 0) */
                 skip_next = (status == 0); 
             }
             
-            start = i + 1; /* Move start pointer to the next command */
+            start = i + 1; 
         }
         i++;
     }
     
-    /* Execute the final or only command in the chain */
     if (!skip_next && args[start] != NULL) {
         status = execute_command(&args[start], shell_active);
     }
