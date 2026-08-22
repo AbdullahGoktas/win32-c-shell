@@ -43,7 +43,6 @@ int execute_command(char **args, int *shell_active) {
     }
 
     /* --- I/O Redirection Start --- */
-    /* Windows'ta shell sürecinin kalıcı olarak yönlendirilmesini önlemek için STDIN ve STDOUT yedeklenir */
     int saved_stdout = _dup(1);
     int saved_stdin  = _dup(0);
     int j = 0;
@@ -54,13 +53,13 @@ int execute_command(char **args, int *shell_active) {
             if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
             int fd_in = _open(args[j + 1], _O_RDONLY);
             if (fd_in < 0) { perror("myshell: input file"); redirect_err = 1; break; }
-            _dup2(fd_in, 0); /* 0: STDIN */
+            _dup2(fd_in, 0); 
             _close(fd_in);
         } else if (strcmp(args[j], ">") == 0) {
             if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
             int fd_out = _open(args[j + 1], _O_WRONLY | _O_CREAT | _O_TRUNC, _S_IREAD | _S_IWRITE);
             if (fd_out < 0) { perror("myshell: output file"); redirect_err = 1; break; }
-            _dup2(fd_out, 1); /* 1: STDOUT */
+            _dup2(fd_out, 1); 
             _close(fd_out);
         } else if (strcmp(args[j], ">>") == 0) {
             if (args[j+1] == NULL) { fprintf(stderr, "myshell: syntax error\n"); redirect_err = 1; break; }
@@ -72,7 +71,6 @@ int execute_command(char **args, int *shell_active) {
         j++;
     }
 
-    /* Argüman dizisi, exec çağrısı için ilk yönlendirme operatörünün olduğu yerden kesilir */
     j = 0;
     while (args[j] != NULL) {
         if (strcmp(args[j], "<") == 0 || strcmp(args[j], ">") == 0 || strcmp(args[j], ">>") == 0) {
@@ -85,7 +83,6 @@ int execute_command(char **args, int *shell_active) {
 
     int status = 1;
 
-    /* Eğer yönlendirme hatası yoksa komutu çalıştır */
     if (!redirect_err && args[0] != NULL) {
         int builtin_status = execute_builtin(args, shell_active);
         
@@ -96,12 +93,84 @@ int execute_command(char **args, int *shell_active) {
         }
     }
     
-    /* Komut (built-in veya sistem komutu) bittikten sonra standart akışları geri yükle */
     _dup2(saved_stdout, 1);
     _dup2(saved_stdin, 0);
     _close(saved_stdout);
     _close(saved_stdin);
 
+    return status;
+}
+
+/* 
+ * execute_pipeline: Splits arguments by '|' and links their standard streams using _pipe() 
+ */
+int execute_pipeline(char **args, int *shell_active) {
+    int i = 0;
+    int num_pipes = 0;
+    
+    /* Count the number of pipes in this segment */
+    while (args[i] != NULL) {
+        if (strcmp(args[i], "|") == 0) {
+            num_pipes++;
+        }
+        i++;
+    }
+    
+    /* If no pipes, fallback to regular command execution */
+    if (num_pipes == 0) {
+        return execute_command(args, shell_active);
+    }
+    
+    int saved_stdin = _dup(0);
+    int saved_stdout = _dup(1);
+    int fd_in = _dup(0); /* The initial input is standard input */
+    int status = 0;
+    int start = 0;
+    
+    i = 0;
+    while (args[i] != NULL) {
+        if (strcmp(args[i], "|") == 0) {
+            args[i] = NULL; /* Isolate the current command */
+            
+            int pipefd[2];
+            /* 256 KB buffer size for Windows pipe to prevent deadlocks in synchronous spawn */
+            if (_pipe(pipefd, 262144, _O_BINARY) == -1) {
+                perror("myshell: pipe error");
+                break;
+            }
+            
+            /* Read from previous pipe (or stdin for the first command) */
+            _dup2(fd_in, 0);
+            _close(fd_in);
+            
+            /* Write to current pipe */
+            _dup2(pipefd[1], 1);
+            _close(pipefd[1]);
+            
+            /* Execute the isolated command */
+            status = execute_command(&args[start], shell_active);
+            
+            /* Save the read end of the pipe for the next command */
+            fd_in = pipefd[0]; 
+            start = i + 1;
+        }
+        i++;
+    }
+    
+    /* Process the final command in the pipeline */
+    _dup2(fd_in, 0);
+    _close(fd_in);
+    
+    /* Restore standard output for the final command */
+    _dup2(saved_stdout, 1);
+    
+    status = execute_command(&args[start], shell_active);
+    
+    /* Restore standard input completely */
+    _dup2(saved_stdin, 0);
+    _close(saved_stdin);
+    _close(saved_stdout);
+    
     return status;
 }
 
@@ -117,7 +186,8 @@ int execute_logic(char **args, int *shell_active) {
             args[i] = NULL; 
             
             if (!skip_next) {
-                status = execute_command(&args[start], shell_active);
+                /* Evaluate the pipeline block instead of a single command */
+                status = execute_pipeline(&args[start], shell_active);
             }
             
             if (strcmp(operator, "&&") == 0) {
@@ -132,7 +202,7 @@ int execute_logic(char **args, int *shell_active) {
     }
     
     if (!skip_next && args[start] != NULL) {
-        status = execute_command(&args[start], shell_active);
+        status = execute_pipeline(&args[start], shell_active);
     }
     
     return status;

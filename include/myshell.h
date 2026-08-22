@@ -21,6 +21,7 @@ void expand_variables(char **args);
 
 /* Execution Functions */
 int execute_logic(char **args, int *shell_active);
+int execute_pipeline(char **args, int *shell_active);
 int execute_command(char **args, int *shell_active);
 int launch_process(char **args, int is_bg);
 
