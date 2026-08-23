@@ -1,4 +1,5 @@
 #include "myshell.h"
+#include <windows.h> /* Required for FindFirstFile and FindNextFile */
 
 char *read_line(FILE *stream) {
     int bufsize = LSH_RL_BUFSIZE;
@@ -92,4 +93,59 @@ void expand_variables(char **args) {
         }
         i++;
     }
+}
+
+/* 
+ * expand_wildcards: Expands '*' and '?' using Windows API 
+ * Returns a newly allocated arguments array and frees the old one.
+ */
+char **expand_wildcards(char **args) {
+    int bufsize = LSH_TOK_BUFSIZE;
+    int position = 0;
+    char **new_args = malloc(bufsize * sizeof(char*));
+
+    if (!new_args) {
+        fprintf(stderr, "myshell: memory allocation error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; args[i] != NULL; i++) {
+        /* Check if the token contains wildcard characters */
+        if (strchr(args[i], '*') != NULL || strchr(args[i], '?') != NULL) {
+            WIN32_FIND_DATAA findFileData;
+            HANDLE hFind = FindFirstFileA(args[i], &findFileData);
+
+            if (hFind == INVALID_HANDLE_VALUE) {
+                /* No match found, keep the original argument */
+                new_args[position++] = args[i];
+                if (position >= bufsize) {
+                    bufsize += LSH_TOK_BUFSIZE;
+                    new_args = realloc(new_args, bufsize * sizeof(char*));
+                }
+            } else {
+                do {
+                    /* Ignore "." and ".." directories */
+                    if (strcmp(findFileData.cFileName, ".") != 0 && strcmp(findFileData.cFileName, "..") != 0) {
+                        new_args[position++] = strdup(findFileData.cFileName);
+                        if (position >= bufsize) {
+                            bufsize += LSH_TOK_BUFSIZE;
+                            new_args = realloc(new_args, bufsize * sizeof(char*));
+                        }
+                    }
+                } while (FindNextFileA(hFind, &findFileData) != 0);
+                FindClose(hFind);
+            }
+        } else {
+            /* No wildcard, just copy the pointer */
+            new_args[position++] = args[i];
+            if (position >= bufsize) {
+                bufsize += LSH_TOK_BUFSIZE;
+                new_args = realloc(new_args, bufsize * sizeof(char*));
+            }
+        }
+    }
+    
+    new_args[position] = NULL;
+    free(args); /* Free the old array of pointers */
+    return new_args;
 }

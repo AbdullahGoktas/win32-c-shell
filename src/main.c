@@ -51,6 +51,9 @@ int main(int argc, char **argv) {
             /* Expand environment variables like $PATH or $USER */
             expand_variables(args);
             
+            /* Expand wildcards like *.txt or ?est.c */
+            args = expand_wildcards(args);
+            
             /* Pass the parsed arguments to the logic evaluator */
             execute_logic(args, &shell_active);
         }

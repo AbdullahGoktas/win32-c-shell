@@ -10,6 +10,7 @@ A comprehensive custom shell written in C for Windows environments. It bridges t
 - **I/O Redirection (`>`, `<`, `>>`):** Redirects standard input and output streams to files.
 - **Logical Operators (`&&`, `||`):** Chains commands conditionally based on the exit status of the previous process.
 - **Background Execution (`&`):** Executes processes non-blockingly (`_P_NOWAIT`), returning control to the shell immediately.
+- **Wildcard Expansion (`*`, `?`):** Automatically expands globbing patterns using the Windows API (`FindFirstFile`) before command execution.
 - **Command History:** Stores the last 100 executed commands in memory, accessible via the `history` built-in.
 - **Environment Variables:** Expands variables (e.g., `$PATH`, `$USER`) and allows setting them via the `export` command.
 - **Script Execution:** Supports batch execution by passing a script file as an argument (e.g., `./myshell.exe script.txt`).

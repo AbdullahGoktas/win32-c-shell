@@ -18,6 +18,7 @@
 char *read_line(FILE *stream);
 char **split_line(char *line);
 void expand_variables(char **args);
+char **expand_wildcards(char **args);
 
 /* Execution Functions */
 int execute_logic(char **args, int *shell_active);
