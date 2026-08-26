@@ -5,6 +5,7 @@ A comprehensive custom shell written in C for Windows environments. It bridges t
 ## Features
 
 - **REPL & Dynamic Prompt:** Read-Eval-Print Loop with a dynamic prompt showing the current working directory (`_getcwd`).
+- **Tab Completion:** Interactive auto-completion for files and directories using the `TAB` key (powered by `_getch` and Windows API).
 - **Windows Process Execution:** Utilizes `<process.h>` and `_spawnvp` for native Windows command execution.
 - **Pipelining (`|`):** Connects the output of one command to the input of another using anonymous Windows pipes (`_pipe`).
 - **I/O Redirection (`>`, `<`, `>>`):** Redirects standard input and output streams to files.
